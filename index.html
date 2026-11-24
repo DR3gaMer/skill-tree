@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#05070a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="application-name" content="ctOS Skills" />
+  <title>ctOS // Skill Tree Pessoal</title>
+
+  <!-- Ícone vetorial embutido para atalho na tela inicial do Android -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2305070a'/%3E%3Ccircle cx='50' cy='50' r='32' fill='none' stroke='%2300e5ff' stroke-width='8' stroke-dasharray='45 10'/%3E%3Ccircle cx='50' cy='50' r='8' fill='%23ffffff'/%3E%3C/svg%3E" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fontes estilo HUD / Watch Dogs (Rajdhani + Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            hud: ['Rajdhani', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            ctos: {
+              bg: '#05070a',
+              panel: '#0b0f17',
+              border: '#1e293b',
+              cyan: '#00e5ff',
+              blue: '#2979ff',
+              red: '#ff1744',
+              lime: '#c6ff00',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Reset & comportamento nativo mobile */
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    input, textarea, select {
+      user-select: text;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #05070a;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      touch-action: none;
+    }
+
+    /* Fundo tático escuro inspirado no mapa ctOS de Chicago */
+    .ctos-grid-bg {
+      background-color: #05070a;
+      background-image:
+        radial-gradient(circle at 50% 45%, rgba(0, 229, 255, 0.04) 0%, rgba(5, 7, 10, 0.92) 70%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 100% 100%, 42px 42px, 42px 42px;
+    }
+
+    /* Efeito sutil de scanlines */
+    .ctos-scanlines {
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0, 0, 0, 0.22) 4px
+      );
+      pointer-events: none;
+    }
+
+    /* Animações suaves para nós e HUD */
+    @keyframes pulseTarget {
+      0%, 100% { transform: scale(1); opacity: 0.95; }
+      50% { transform: scale(1.12); opacity: 0.55; }
+    }
+
+    .node-target-ring {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: pulseTarget 2s infinite ease-in-out;
+    }
+
+    .svg-node-group {
+      cursor: pointer;
+      transition: opacity 0.25s ease;
+    }
+
+    .svg-arc-segment {
+      cursor: pointer;
+      transition: filter 0.25s ease, opacity 0.25s ease;
+    }
+
+    .svg-arc-segment:hover {
+      filter: brightness(1.2);
+    }
+
+    /* Scrollbar customizada para modais */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="ctos-grid-bg relative w-full h-full flex flex-col justify-between">
+
+  <!-- Camada sutil de scanlines -->
+  <div class="ctos-scanlines fixed inset-0 z-10"></div>
+
+  <!-- ===================================================================== -->
+  <!-- TOP HUD BAR (Navegação Superior estilo Watch Dogs)                    -->
+  <!-- ===================================================================== -->
+  <header id="top-hud" class="relative z-30 w-full px-3 pt-3 pb-2 flex items-center justify-between gap-2 pointer-events-none">
+    
+    <!-- Esquerda: Logo ctOS (Macro) ou Botão Voltar ao Anel (Micro) -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <div id="macro-brand" class="flex items-center gap-2 bg-[#0b0f17]/90 border border-slate-800/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-lg">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span class="font-hud font-bold tracking-widest text-sm sm:text-base text-white uppercase">ctOS <span class="text-slate-400 font-medium">// SKILLS</span></span>
+      </div>
+
+      <button id="btn-back-macro" onclick="switchToMacro()" class="hidden items-center gap-1.5 bg-[#0b0f17]/90 hover:bg-slate-800 active:scale-95 border border-slate-700/90 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs sm:text-sm font-hud font-semibold tracking-wider text-slate-200 uppercase transition shadow-lg">
+        <svg class="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        <span>Anel Geral</span>
+      </button>
+    </div>
+
+    <!-- Centro: Navegação entre Seções na Visão Micro (< Anterior | Seção | Próxima >) -->
+    <div id="micro-nav" class="hidden items-center gap-1.5 sm:gap-3 pointer-events-auto bg-[#0b0f17]/90 border border-slate-800/90 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-xl">
+      <button onclick="navigateSection(-1)" title="Seção Anterior" class="p-1.5 rounded-lg hover:bg-slate-800 active:scale-90 text-slate-300 transition flex items-center gap-1">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>
+        <span id="prev-sec-label" class="hidden md:inline text-xs font-hud uppercase tracking-wider text-slate-400">Anterior</span>
+      </button>
+
+      <div class="flex flex-col items-center px-1 min-w-[100px] sm:min-w-[140px]">
+        <!-- Dots de paginação iguais aos da imagem 2 do Watch Dogs -->
+        <div id="section-dots" class="flex items-center gap-1.5 mb-0.5"></div>
+        <div class="flex items-center gap-1.5">
+          <span id="micro-sec-title" class="font-hud font-bold text-base sm:text-lg tracking-wider text-white uppercase leading-none">Hacking</span>
+          <button onclick="openSectionModal(true)" title="Editar Seção" class="text-slate-400 hover:text-white p-0.5 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button onclick="navigateSection(1)" title="Próxima Seção" class="p-1.5 rounded-lg hover:bg-slate-800 active:scale-90 text-slate-300 transition flex items-center gap-1">
+        <span id="next-sec-label" class="hidden md:inline text-xs font-hud uppercase tracking-wider text-slate-400">Próxima</span>
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- Direita: Botões de Molde/Backup e Nova Seção -->
+    <div class="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+      <button onclick="openDataModal()" title="Molde & Backup" class="bg-[#0b0f17]/90 hover:bg-slate-800 active:scale-95 border border-slate-800 backdrop-blur-md p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-hud font-semibold tracking-wider text-slate-300 uppercase flex items-center gap-1.5 transition shadow-lg">
+        <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="hidden sm:inline">Molde / Dados</span>
+      </button>
+
+      <button id="btn-add-section" onclick="openSectionModal(false)" class="bg-cyan-500/15 hover:bg-cyan-500/25 active:scale-95 border border-cyan-400/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs sm:text-sm font-hud font-bold tracking-wider text-cyan-300 uppercase flex items-center gap-1 transition shadow-lg">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Seção</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- ÁREA INTERATIVA PRINCIPAL (SVG Canvas com Pan & Zoom)                 -->
+  <!-- ===================================================================== -->
+  <main id="canvas-container" class="relative flex-1 w-full h-full overflow-hidden z-20">
+    <svg id="skill-svg" class="w-full h-full block" viewBox="-500 -500 1000 1000" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <!-- Filtros de Brilho Neon -->
+        <filter id="neon-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="strong-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="10" result="blur1" />
+          <feGaussianBlur stdDeviation="4" result="blur2" />
+          <feMerge>
+            <feMergeNode in="blur1" />
+            <feMergeNode in="blur2" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Grupo transformável por Pan e Zoom -->
+      <g id="viewport-group">
+        <!-- Luz ambiental radial dinâmica -->
+        <circle id="ambient-glow" cx="0" cy="0" r="240" fill="url(#ambient-grad)" opacity="0.18" pointer-events="none"></circle>
+        <g id="tree-edges"></g>
+        <g id="tree-arcs"></g>
+        <g id="tree-nodes"></g>
+      </g>
+    </svg>
+
+    <!-- Estado Vazio (Quando o usuário limpa tudo para usar como molde em branco) -->
+    <div id="empty-mold-overlay" class="hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center pointer-events-none z-20">
+      <div class="bg-[#0b0f17]/90 border border-slate-800 backdrop-blur-md p-6 rounded-2xl max-w-sm pointer-events-auto shadow-2xl">
+        <div class="w-12 h-12 rounded-full border-2 border-dashed border-cyan-400/60 flex items-center justify-center mx-auto mb-3 text-cyan-400">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <h2 class="font-hud font-bold text-xl tracking-wider uppercase text-white mb-1">Molde em Branco</h2>
+        <p class="text-xs text-slate-400 mb-4 leading-relaxed">Seu anel de habilidades está limpo. Crie sua primeira seção (ex: Estudos, Treino, Música, Projetos) para começar a construir sua árvore.</p>
+        <button onclick="openSectionModal(false)" class="w-full py-2.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-hud font-bold tracking-wider uppercase text-sm transition shadow-lg">
+          + Criar Primeira Seção
+        </button>
+      </div>
+    </div>
+
+    <!-- Controles Flutuantes de Câmera (Zoom + / - / Reset) -->
+    <div class="absolute right-3 top-2 flex flex-col gap-1.5 z-30">
+      <button onclick="zoomBy(1.22)" title="Aproximar" class="w-9 h-9 rounded-lg bg-[#0b0f17]/85 hover:bg-slate-800 active:scale-90 border border-slate-800 text-slate-200 flex items-center justify-center shadow-md backdrop-blur-sm font-bold text-lg">+</button>
+      <button onclick="zoomBy(0.82)" title="Afastar" class="w-9 h-9 rounded-lg bg-[#0b0f17]/85 hover:bg-slate-800 active:scale-90 border border-slate-800 text-slate-200 flex items-center justify-center shadow-md backdrop-blur-sm font-bold text-lg">−</button>
+      <button onclick="resetCamera()" title="Centralizar Câmera" class="w-9 h-9 rounded-lg bg-[#0b0f17]/85 hover:bg-slate-800 active:scale-90 border border-slate-800 text-slate-300 flex items-center justify-center shadow-md backdrop-blur-sm">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M3 12h3m12 0h3M12 3v3m0 12v3"/></svg>
+      </button>
+    </div>
+
+    <!-- Botão Flutuante na Visão Micro: Adicionar Novo Ramo Principal no Arco -->
+    <div id="micro-add-root-wrap" class="hidden absolute left-3 bottom-16 sm:bottom-5 z-30">
+      <button onclick="openNodeModal('create_root')" class="flex items-center gap-1.5 bg-[#0b0f17]/95 hover:bg-slate-800 active:scale-95 border border-slate-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-hud font-bold tracking-wider uppercase text-white shadow-xl backdrop-blur-md transition">
+        <span id="micro-root-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+        <span>+ Novo Ramo no Arco</span>
+      </button>
+    </div>
+
+    <!-- Badge de XP Total estilo "AVAILABLE SKILL POINTS" do Watch Dogs 1 -->
+    <div id="xp-hud-badge" class="absolute right-3 bottom-3 z-30 bg-white text-[#05070a] px-3 py-1.5 rounded-md shadow-xl flex items-center gap-2 border border-white/80">
+      <span class="font-hud font-bold text-xs sm:text-sm tracking-widest uppercase">SKILL XP</span>
+      <svg class="w-3.5 h-3.5 text-cyan-600" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span id="total-xp-value" class="font-hud font-bold text-sm sm:text-base leading-none">0</span>
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- PAINEL INFERIOR DO NÓ SELECIONADO (Estilo Descrição Watch Dogs 1)     -->
+  <!-- ===================================================================== -->
+  <section id="node-hud-drawer" class="hidden fixed inset-x-0 bottom-0 z-40 bg-[#080b11]/95 border-t border-slate-800 backdrop-blur-xl px-4 pt-3.5 pb-5 sm:px-6 shadow-[0_-15px_40px_rgba(0,0,0,0.85)] transition-transform duration-200">
+    <div class="max-w-2xl mx-auto">
+      <!-- Cabeçalho do Nó -->
+      <div class="flex items-start justify-between gap-3 mb-2">
+        <div class="flex items-center gap-3">
+          <div id="hud-node-icon-box" class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 border-2">
+            <!-- Ícone injetado via JS -->
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 id="hud-node-title" class="font-hud font-bold text-lg sm:text-xl text-white tracking-wide leading-tight">Título da Habilidade</h3>
+              <span id="hud-node-status" class="text-[10px] font-hud font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-slate-800 text-slate-300">Planejado</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-slate-400">
+              <span id="hud-node-diff" class="font-hud font-semibold uppercase tracking-wider text-cyan-400">Intermediária • +50 XP</span>
+              <span id="hud-node-date-wrap" class="hidden items-center gap-1 text-emerald-400 font-medium">
+                <span>•</span>
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span id="hud-node-date"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="deselectNode()" title="Fechar Detalhes" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Descrição / Notas -->
+      <p id="hud-node-desc" class="text-xs sm:text-sm text-slate-300 mb-3.5 leading-relaxed max-h-20 overflow-y-auto">
+        Descrição da habilidade ou realização.
+      </p>
+
+      <!-- Confirmação Inline de Exclusão (Substitui confirm()) -->
+      <div id="delete-confirm-bar" class="hidden mb-3 p-2.5 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center justify-between gap-2">
+        <span class="text-xs text-red-200 font-medium">Excluir esta habilidade e suas derivações?</span>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="toggleDeleteConfirm(false)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-slate-300 font-semibold">Cancelar</button>
+          <button onclick="confirmDeleteSelectedNode()" class="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs text-white font-bold">Excluir</button>
+        </div>
+      </div>
+
+      <!-- Barra de Ações do Nó -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <button id="btn-cycle-status" onclick="cycleSelectedNodeStatus()" class="col-span-2 sm:col-span-1 py-2 px-3 rounded-xl font-hud font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-1.5 transition shadow-md active:scale-95">
+          <!-- Texto dinâmico via JS -->
+        </button>
+
+        <button onclick="openNodeModal('derive')" class="py-2 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/60 text-cyan-300 font-hud font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-1 transition active:scale-95">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Derivar</span>
+        </button>
+
+        <button onclick="openNodeModal('edit')" class="py-2 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 font-hud font-semibold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Editar</span>
+        </button>
+
+        <button onclick="toggleDeleteConfirm(true)" class="py-2 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 text-red-400 font-hud font-semibold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          <span>Excluir</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: CRIAR / EDITAR SEÇÃO (Fatia do Anel)                           -->
+  <!-- ===================================================================== -->
+  <div id="section-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0b0f17] border border-slate-700/90 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="section-modal-title" class="font-hud font-bold text-xl tracking-wider uppercase text-white">Nova Seção</h2>
+        <button onclick="closeSectionModal()" class="text-slate-400 hover:text-white p-1">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-hud uppercase tracking-wider text-slate-400 mb-1">Nome da Área / Seção</label>
+          <input id="sec-input-name" type="text" maxlength="24" placeholder="Ex: Programação, Música, Fitness..." class="w-full bg-[#05070a] border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-hud uppercase tracking-wider text-slate-400 mb-2">Cor Neon da Seção</label>
+          <div id="sec-color-swatches" class="grid grid-cols-4 gap-2 mb-2.5"></div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">Personalizada:</span>
+            <input id="sec-input-color" type="color" value="#00e5ff" class="w-9 h-8 rounded bg-transparent border-0 cursor-pointer" />
+          </div>
+        </div>
+
+        <!-- Opção de excluir seção no modo edição -->
+        <div id="sec-delete-zone" class="hidden pt-2 border-t border-slate-800">
+          <div id="sec-del-prompt" class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Remover esta seção inteira?</span>
+            <button type="button" onclick="document.getElementById('sec-del-confirm').classList.remove('hidden')" class="text-xs font-hud font-bold uppercase text-red-400 hover:text-red-300">Excluir Seção</button>
+          </div>
+          <div id="sec-del-confirm" class="hidden mt-2 p-2.5 rounded-xl bg-red-950/60 border border-red-500/40 flex items-center justify-between">
+            <span class="text-xs text-red-200">Apagar seção e todos os nós?</span>
+            <button type="button" onclick="deleteCurrentSection()" class="px-3 py-1 rounded-lg bg-red-600 text-xs font-bold text-white">Confirmar</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2">
+          <button type="button" onclick="closeSectionModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-hud font-semibold uppercase tracking-wider text-sm transition">Cancelar</button>
+          <button type="button" onclick="saveSectionModal()" class="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-hud font-bold uppercase tracking-wider text-sm transition shadow-lg">Salvar Seção</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: CRIAR / DERIVAR / EDITAR HABILIDADE (Nó)                       -->
+  <!-- ===================================================================== -->
+  <div id="node-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-[#0b0f17] border border-slate-700/90 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-800">
+        <div>
+          <h2 id="node-modal-title" class="font-hud font-bold text-xl tracking-wider uppercase text-white">Nova Habilidade</h2>
+          <p id="node-modal-subtitle" class="text-xs text-cyan-400 font-hud uppercase tracking-wider"></p>
+        </div>
+        <button onclick="closeNodeModal()" class="text-slate-400 hover:text-white p-1">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4">
+        <!-- Título -->
+        <div>
+          <label class="block text-xs font-hud uppercase tracking-wider text-slate-400 mb-1">Nome da Habilidade / Conquista *</label>
+          <input id="node-input-title" type="text" maxlength="48" placeholder="Ex: Criar API REST em Python, Correr 5km..." class="w-full bg-[#05070a] border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition" />
+        </div>
+
+        <!-- Nível de Dificuldade (5 Tiers) + Status -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-hud uppercase tracking-wider text-slate-400 mb-1">Dificuldade (Nível / XP)</label>
+            <select id="node-input-diff" class="w-full bg-[#05070a] border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2.5 text-sm text-white outline-none">
+              <option value="1">1 • Muito Fácil (10 XP)</option>
+              <option value="2">2 • Fácil (25 XP)</option>
+              <option value="3" selected>3 • Intermediária (50 XP)</option>
+              <option value="4">4 • Difícil (100 XP)</option>
+              <option value="5">5 • Muito Difícil (250 XP)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-hud uppercase tracking-wider text-slate-400 mb-1">Status Atual</label>
+            <select id="node-input-status" class="w-full bg-[#05070a] border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2.5 text-sm text-white outline-none">
+              <option value="planejado">Planejado (Cinza)</option>
+              <option value="em_andamento">Em Andamento (Borda Branca)</option>
+              <option value="concluido">Concluído (Neon Ativo)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Data de Conclusão (Opcional) -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-hud uppercase tracking-wider text-slate-400">Data de Conclusão <span class="text-slate-500 normal-case">(Opcional)</span></label>
+            <button type="button" onclick="document.getElementById('node-input-date').value=''" class="text-[11px] text-slate-400 hover:text-cyan-400">Limpar data</button>
+          </div>
+          <input id="node-input-date" type="date" class="w-full bg-[#05070a] border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2 text-sm text-white outline-none" />
+        </div>
+
+        <!-- Seletor de Ícone dentro da bolinha -->
+        <div>
+          <label class="block text-xs font-hud uppercase tracking-wider text-slate-400 mb-1.5">Ícone do Nó</label>
+          <div id="icon-picker-grid" class="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-36 overflow-y-auto p-2 bg-[#05070a] border border-slate-800 rounded-xl">
+            <!-- Ícones gerados via JS -->
+          </div>
+        </div>
+
+        <!-- Ajuste Fino do Ângulo da Ramificação -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-hud uppercase tracking-wider text-slate-400">Direção / Ângulo do Ramo</label>
+            <span id="angle-offset-label" class="text-xs font-hud text-cyan-400">0° (Automático)</span>
+          </div>
+          <input id="node-input-angle" type="range" min="-65" max="65" step="5" value="0" oninput="document.getElementById('angle-offset-label').textContent = this.value == 0 ? '0° (Automático)' : (this.value > 0 ? '+' + this.value + '°' : this.value + '°')" class="w-full accent-cyan-400 cursor-pointer" />
+        </div>
+
+        <!-- Notas / Descrição -->
+        <div>
+          <label class="block text-xs font-hud uppercase tracking-wider text-slate-400 mb-1">Notas / Detalhes da Conquista</label>
+          <textarea id="node-input-desc" rows="2" placeholder="O que você precisa fazer ou o que aprendeu nessa etapa..." class="w-full bg-[#05070a] border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2 text-sm text-white outline-none resize-none"></textarea>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-800 flex items-center gap-2">
+        <button type="button" onclick="closeNodeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-hud font-semibold uppercase tracking-wider text-sm transition">Cancelar</button>
+        <button type="button" onclick="saveNodeModal()" class="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-hud font-bold uppercase tracking-wider text-sm transition shadow-lg">Salvar Nó</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: MOLDE, BACKUP & EXPORTAÇÃO JSON                                -->
+  <!-- ===================================================================== -->
+  <div id="data-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0b0f17] border border-slate-700/90 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-hud font-bold text-xl tracking-wider uppercase text-white">Molde & Dados Locais</h2>
+        <button onclick="closeDataModal()" class="text-slate-400 hover:text-white p-1">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+        Tudo fica salvo automaticamente na memória do seu navegador/celular. Use as opções abaixo para zerar o molde ou fazer backup em arquivo <code class="text-cyan-400">.json</code>.
+      </p>
+
+      <div class="space-y-2.5">
+        <button onclick="exportBackupJSON()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-hud font-semibold uppercase tracking-wider text-sm flex items-center justify-between transition">
+          <span>Exportar Backup (.json)</span>
+          <svg class="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+
+        <label class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-hud font-semibold uppercase tracking-wider text-sm flex items-center justify-between cursor-pointer transition">
+          <span>Importar Backup (.json)</span>
+          <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <input type="file" accept=".json" onchange="importBackupJSON(event)" class="hidden" />
+        </label>
+
+        <div class="border-t border-slate-800 my-2 pt-2 space-y-2">
+          <button onclick="showWipeConfirm()" class="w-full py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 font-hud font-bold uppercase tracking-wider text-sm flex items-center justify-between transition">
+            <span>Limpar Tudo (Usar Molde Vazio)</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </button>
+
+          <div id="wipe-confirm-box" class="hidden p-3 rounded-xl bg-amber-950/60 border border-amber-500/50 space-y-2">
+            <p class="text-xs text-amber-200">Isso apagará todas as seções e habilidades atuais para deixar o molde em branco. Continuar?</p>
+            <div class="flex justify-end gap-2">
+              <button onclick="document.getElementById('wipe-confirm-box').classList.add('hidden')" class="px-3 py-1 rounded-lg bg-slate-800 text-xs text-slate-300">Cancelar</button>
+              <button onclick="wipeToBlankMold()" class="px-3 py-1 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold">Zerar Molde</button>
+            </div>
+          </div>
+
+          <button onclick="restoreDemoData()" class="w-full py-2 px-4 rounded-xl bg-transparent hover:bg-slate-800/70 text-slate-400 hover:text-slate-200 font-hud uppercase tracking-wider text-xs transition">
+            Restaurar Exemplo Demonstrativo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de Feedback Rápido -->
+  <div id="ctos-toast" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#0b0f17]/95 border border-cyan-400/70 text-cyan-300 px-4 py-2 rounded-xl text-xs font-hud font-bold uppercase tracking-widest shadow-2xl backdrop-blur-md">
+    Atualizado
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- LÓGICA DO APLICATIVO (Árvore Radial, SVG Dinâmico, Touch & Storage)   -->
+  <!-- ===================================================================== -->
+  <script>
+    // 1. CONSTANTES E TABELA DE DIFICULDADE (5 NÍVEIS)
+    const STORAGE_KEY = 'ctos_personal_skill_tree_v1';
+
+    const DIFFICULTY_TIERS = {
+      1: { label: 'Muito Fácil', xp: 10 },
+      2: { label: 'Fácil', xp: 25 },
+      3: { label: 'Intermediária', xp: 50 },
+      4: { label: 'Difícil', xp: 100 },
+      5: { label: 'Muito Difícil', xp: 250 }
+    };
+
+    const NEON_PALETTE = [
+      { name: 'Ciano ctOS', hex: '#00e5ff' },
+      { name: 'Azul Royal', hex: '#2979ff' },
+      { name: 'Vermelho Alerta', hex: '#ff1744' },
+      { name: 'Verde Lima', hex: '#c6ff00' },
+      { name: 'Âmbar Solar', hex: '#ffab00' },
+      { name: 'Violeta Neon', hex: '#d500f9' },
+      { name: 'Esmeralda', hex: '#00e676' },
+      { name: 'Laranja Pulso', hex: '#ff6d00' }
+    ];
+
+    // Biblioteca de 22 ícones vetoriais limpos (viewBox 0 0 24 24)
+    const ICON_LIBRARY = {
+      code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+      brain: '<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.54Z"/>',
+      book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+      flask: '<path d="M9 3h6"/><path d="M10 3v6.5L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/>',
+      trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+      target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+      bolt: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+      dumbbell: '<path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><path d="M4 9v6"/><path d="M20 9v6"/><path d="M2 10.5v3"/><path d="M22 10.5v3"/><path d="M7 5v14"/><path d="M17 5v14"/>',
+      heart: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+      music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+      camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+      globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+      briefcase: '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+      rocket: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>',
+      shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+      star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+      wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+      gamepad: '<line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="4"/>',
+      compass: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
+      cpu: '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+      wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+      check: '<polyline points="20 6 9 17 4 12"/>'
+    };
+
+    // 2. DADOS INICIAIS DE EXEMPLO (Estilo 4 seções do Watch Dogs 1)
+    function getDefaultDemoData() {
+      return {
+        sections: [
+          { id: 'sec_tech', name: 'Tech & Código', color: '#00e5ff' },
+          { id: 'sec_acad', name: 'Pesquisa & Estudo', color: '#2979ff' },
+          { id: 'sec_body', name: 'Saúde & Corpo', color: '#ff1744' },
+          { id: 'sec_life', name: 'Projetos & Vida', color: '#c6ff00' }
+        ],
+        nodes: [
+          // Seção 1: Tech & Código (Ciano)
+          { id: 'n_py1', sectionId: 'sec_tech', parentId: null, title: 'Fundamentos de Python', description: 'Dominar sintaxe, estruturas de dados, funções e scripts de automação.', difficulty: 2, status: 'concluido', icon: 'code', completedDate: '2026-03-10', angleOffset: -20 },
+          { id: 'n_py2', sectionId: 'sec_tech', parentId: 'n_py1', title: 'Automação & Web Scraping', description: 'Criar robôs para coletar e organizar dados automaticamente.', difficulty: 3, status: 'concluido', icon: 'bolt', completedDate: '2026-06-18', angleOffset: -15 },
+          { id: 'n_py3', sectionId: 'sec_tech', parentId: 'n_py2', title: 'APIs & Backend', description: 'Construir serviços REST completos com FastAPI ou Flask.', difficulty: 4, status: 'em_andamento', icon: 'cpu', completedDate: '', angleOffset: 0 },
+          { id: 'n_web1', sectionId: 'sec_tech', parentId: null, title: 'Interfaces & Apps Web', description: 'Criar ferramentas visuais interativas para uso próprio no celular.', difficulty: 3, status: 'em_andamento', icon: 'rocket', completedDate: '', angleOffset: 20 },
+          { id: 'n_web2', sectionId: 'sec_tech', parentId: 'n_web1', title: 'PWA Offline Completo', description: 'Dominar armazenamento local e sincronização de dados.', difficulty: 4, status: 'planejado', icon: 'shield', completedDate: '', angleOffset: 10 },
+
+          // Seção 2: Pesquisa & Estudo (Azul Royal)
+          { id: 'n_ac1', sectionId: 'sec_acad', parentId: null, title: 'Leitura Técnica Ativa', description: 'Ler artigos científicos e documentações sem depender só de tutoriais.', difficulty: 2, status: 'concluido', icon: 'book', completedDate: '2026-02-05', angleOffset: 0 },
+          { id: 'n_ac2', sectionId: 'sec_acad', parentId: 'n_ac1', title: 'Metodologia & Síntese', description: 'Estruturar fichamentos e mapas mentais de estudos complexos.', difficulty: 3, status: 'em_andamento', icon: 'brain', completedDate: '', angleOffset: -20 },
+          { id: 'n_ac3', sectionId: 'sec_acad', parentId: 'n_ac1', title: 'Experimentação Prática', description: 'Validar hipóteses com protótipos e análise de resultados.', difficulty: 4, status: 'planejado', icon: 'flask', completedDate: '', angleOffset: 20 },
+
+          // Seção 3: Saúde & Corpo (Vermelho)
+          { id: 'n_bd1', sectionId: 'sec_body', parentId: null, title: 'Consistência de Treino', description: 'Manter rotina semanal ativa por pelo menos 3 meses seguidos.', difficulty: 2, status: 'concluido', icon: 'dumbbell', completedDate: '2026-05-01', angleOffset: 0 },
+          { id: 'n_bd2', sectionId: 'sec_body', parentId: 'n_bd1', title: 'Resistência Cardiovascular', description: 'Completar 5km contínuos com ritmo estável.', difficulty: 3, status: 'em_andamento', icon: 'heart', completedDate: '', angleOffset: -18 },
+          { id: 'n_bd3', sectionId: 'sec_body', parentId: 'n_bd1', title: 'Higiene do Sono & Energia', description: 'Regular horários de descanso para foco máximo durante o dia.', difficulty: 3, status: 'planejado', icon: 'target', completedDate: '', angleOffset: 18 },
+
+          // Seção 4: Projetos & Vida (Verde Lima)
+          { id: 'n_lf1', sectionId: 'sec_life', parentId: null, title: 'Controle Financeiro', description: 'Mapear gastos mensais e construir reserva de emergência.', difficulty: 2, status: 'concluido', icon: 'wallet', completedDate: '2026-04-12', angleOffset: 0 },
+          { id: 'n_lf2', sectionId: 'sec_life', parentId: 'n_lf1', title: 'Projeto Autoral Lançado', description: 'Tirar uma ideia pessoal do papel e colocar em uso real.', difficulty: 5, status: 'planejado', icon: 'trophy', completedDate: '', angleOffset: 0 }
+        ]
+      };
+    }
+
+    // 3. ESTADO GLOBAL DA APLICAÇÃO
+    let appData = { sections: [], nodes: [] };
+    let currentView = 'macro'; // 'macro' | 'micro'
+    let activeSectionId = null;
+    let selectedNodeId = null;
+
+    // Estado dos Modais
+    let editingSectionId = null;
+    let nodeModalMode = 'create_root'; // 'create_root' | 'derive' | 'edit'
+    let editingNodeId = null;
+    let derivingParentId = null;
+    let selectedIconKey = 'star';
+
+    // Estado da Câmera (Pan & Zoom no SVG)
+    let camera = { x: 0, y: 0, scale: 1 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let cameraStart = { x: 0, y: 0 };
+    let dragMoved = false;
+    let initialPinchDist = null;
+    let initialPinchScale = 1;
+
+    // 4. INICIALIZAÇÃO E PERSISTÊNCIA (LocalStorage)
+    function initApp() {
+      loadData();
+      initColorSwatches();
+      initIconPicker();
+      setupPointerEvents();
+      renderAll();
+    }
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.sections) && Array.isArray(parsed.nodes)) {
+            appData = parsed;
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao ler localStorage:', err);
+      }
+      // Primeira vez: carrega exemplo demonstrativo
+      appData = getDefaultDemoData();
+      saveData();
+    }
+
+    function saveData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      } catch (err) {
+        showToast('Aviso: limite de memória local atingido');
+      }
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('ctos-toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.add('hidden'), 2200);
+    }
+
+    // 5. UTILITÁRIOS GEOMÉTRICOS (Coordenadas Polares & Arcos SVG)
+    function degToRad(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function polarToCartesian(cx, cy, r, angleDeg) {
+      const rad = degToRad(angleDeg);
+      return {
+        x: cx + r * Math.cos(rad),
+        y: cy + r * Math.sin(rad)
+      };
+    }
+
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      const start = polarToCartesian(cx, cy, r, startAngle);
+      const end = polarToCartesian(cx, cy, r, endAngle);
+      const sweep = endAngle - startAngle;
+      const largeArcFlag = Math.abs(sweep) <= 180 ? '0' : '1';
+      return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${largeArcFlag} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+    }
+
+    // Calcula XP total de todos os nós concluídos
+    function calculateTotalXP() {
+      return appData.nodes.reduce((sum, n) => {
+        if (n.status === 'concluido') {
+          const tier = DIFFICULTY_TIERS[n.difficulty] || DIFFICULTY_TIERS[3];
+          return sum + tier.xp;
+        }
+        return sum;
+      }, 0);
+    }
+
+    // 6. RENDERIZAÇÃO PRINCIPAL (MACRO VIEW & MICRO VIEW)
+    function renderAll() {
+      // Atualiza contador global de XP
+      document.getElementById('total-xp-value').textContent = calculateTotalXP();
+
+      // Verifica se está no modo molde vazio
+      const emptyOverlay = document.getElementById('empty-mold-overlay');
+      if (appData.sections.length === 0) {
+        if (currentView === 'micro') switchToMacro(false);
+        emptyOverlay.classList.remove('hidden');
+      } else {
+        emptyOverlay.classList.add('hidden');
+      }
+
+      if (currentView === 'macro') {
+        renderMacroView();
+      } else {
+        renderMicroView();
+      }
+
+      updateNodeHudDrawer();
+    }
+
+    // -----------------------------------------------------------------------
+    // A. VISÃO MACRO: ANEL SEGMENTADO CENTRAL (Imagem 1 do Watch Dogs)
+    // -----------------------------------------------------------------------
+    function renderMacroView() {
+      const arcsGroup = document.getElementById('tree-arcs');
+      const edgesGroup = document.getElementById('tree-edges');
+      const nodesGroup = document.getElementById('tree-nodes');
+      const ambientGlow = document.getElementById('ambient-glow');
+
+      arcsGroup.innerHTML = '';
+      edgesGroup.innerHTML = '';
+      nodesGroup.innerHTML = '';
+
+      ambientGlow.setAttribute('cx', '0');
+      ambientGlow.setAttribute('cy', '0');
+      ambientGlow.setAttribute('fill', '#00e5ff');
+      ambientGlow.setAttribute('opacity', '0.06');
+
+      const sections = appData.sections;
+      const N = sections.length;
+
+      // Círculo central base (mesmo quando N === 0)
+      const baseRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      baseRing.setAttribute('cx', '0');
+      baseRing.setAttribute('cy', '0');
+      baseRing.setAttribute('r', '142');
+      baseRing.setAttribute('fill', '#06090f');
+      baseRing.setAttribute('stroke', '#1e293b');
+      baseRing.setAttribute('stroke-width', '20');
+      arcsGroup.appendChild(baseRing);
+
+      // Texto central "SKILLS"
+      const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      titleText.setAttribute('x', '0');
+      titleText.setAttribute('y', N > 0 ? '-2' : '8');
+      titleText.setAttribute('text-anchor', 'middle');
+      titleText.setAttribute('fill', '#ffffff');
+      titleText.setAttribute('font-family', 'Rajdhani, sans-serif');
+      titleText.setAttribute('font-weight', '700');
+      titleText.setAttribute('font-size', '34');
+      titleText.setAttribute('letter-spacing', '6');
+      titleText.textContent = 'SKILLS';
+      arcsGroup.appendChild(titleText);
+
+      if (N > 0) {
+        const doneCount = appData.nodes.filter(n => n.status === 'concluido').length;
+        const subText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        subText.setAttribute('x', '0');
+        subText.setAttribute('y', '24');
+        subText.setAttribute('text-anchor', 'middle');
+        subText.setAttribute('fill', '#64748b');
+        subText.setAttribute('font-family', 'Rajdhani, sans-serif');
+        subText.setAttribute('font-weight', '600');
+        subText.setAttribute('font-size', '14');
+        subText.setAttribute('letter-spacing', '2');
+        subText.textContent = `${doneCount}/${appData.nodes.length} CONCLUÍDAS`;
+        arcsGroup.appendChild(subText);
+      }
+
+      if (N === 0) return;
+
+      const stepDeg = 360 / N;
+      const gapDeg = N === 1 ? 0 : Math.min(5, stepDeg * 0.12);
+      const startOffset = -90; // Começa no topo
+
+      sections.forEach((sec, idx) => {
+        const startAngle = startOffset + idx * stepDeg + gapDeg / 2;
+        const endAngle = startOffset + (idx + 1) * stepDeg - gapDeg / 2;
+        const midAngle = (startAngle + endAngle) / 2;
+
+        // 1. Arco colorido da seção no anel central
+        const arcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const d = N === 1
+          ? describeArc(0, 0, 142, -90, 269.9)
+          : describeArc(0, 0, 142, startAngle, endAngle);
+
+        arcPath.setAttribute('d', d);
+        arcPath.setAttribute('fill', 'none');
+        arcPath.setAttribute('stroke', sec.color);
+        arcPath.setAttribute('stroke-width', '22');
+        arcPath.setAttribute('stroke-linecap', 'butt');
+        arcPath.setAttribute('class', 'svg-arc-segment');
+        arcPath.setAttribute('filter', 'url(#neon-glow)');
+        arcPath.addEventListener('click', () => {
+          if (!dragMoved) switchToMicro(sec.id);
+        });
+        arcsGroup.appendChild(arcPath);
+
+        // Rótulo discreto da seção próximo ao anel
+        const labelPos = polarToCartesian(0, 0, 110, midAngle);
+        const secLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        secLabel.setAttribute('x', labelPos.x.toFixed(1));
+        secLabel.setAttribute('y', labelPos.y.toFixed(1));
+        secLabel.setAttribute('text-anchor', 'middle');
+        secLabel.setAttribute('dominant-baseline', 'middle');
+        secLabel.setAttribute('fill', sec.color);
+        secLabel.setAttribute('font-family', 'Rajdhani, sans-serif');
+        secLabel.setAttribute('font-weight', '700');
+        secLabel.setAttribute('font-size', '11');
+        secLabel.setAttribute('letter-spacing', '1');
+        secLabel.setAttribute('pointer-events', 'none');
+        secLabel.textContent = sec.name.length > 12 ? sec.name.slice(0, 11) + '…' : sec.name.toUpperCase();
+        arcsGroup.appendChild(secLabel);
+
+        // 2. Miniatura das ramificações irradiando para fora do anel
+        const secNodes = appData.nodes.filter(n => n.sectionId === sec.id);
+        const rootNodes = secNodes.filter(n => !n.parentId);
+        const wedgeSpan = Math.min(stepDeg * 0.72, 65);
+
+        rootNodes.forEach((root, rIdx) => {
+          const frac = rootNodes.length === 1 ? 0 : (rIdx / (rootNodes.length - 1)) - 0.5;
+          const baseAngle = midAngle + frac * wedgeSpan + (root.angleOffset || 0) * 0.35;
+
+          const arcAnchor = polarToCartesian(0, 0, 154, baseAngle);
+          const rootPos = polarToCartesian(0, 0, 210, baseAngle);
+
+          // Linha do anel até o nó raiz
+          drawEdge(edgesGroup, arcAnchor.x, arcAnchor.y, rootPos.x, rootPos.y, root.status, sec.color, 2);
+
+          // Renderiza recursivamente os filhos em miniatura
+          renderMacroBranchRecursive(sec, secNodes, root, rootPos, baseAngle, 1, edgesGroup, nodesGroup);
+        });
+      });
+    }
+
+    function renderMacroBranchRecursive(sec, secNodes, node, pos, currentAngle, depth, edgesGroup, nodesGroup) {
+      const children = secNodes.filter(n => n.parentId === node.id);
+      const stepDist = Math.max(42, 56 - depth * 6);
+      const fanSpread = Math.max(22, 46 - depth * 8);
+
+      children.forEach((child, cIdx) => {
+        const frac = children.length === 1 ? 0 : (cIdx / (children.length - 1)) - 0.5;
+        const childAngle = currentAngle + frac * fanSpread + (child.angleOffset || 0) * 0.45;
+        const childPos = polarToCartesian(pos.x, pos.y, stepDist, childAngle);
+
+        drawEdge(edgesGroup, pos.x, pos.y, childPos.x, childPos.y, child.status, sec.color, 1.8);
+        renderMacroBranchRecursive(sec, secNodes, child, childPos, childAngle, depth + 1, edgesGroup, nodesGroup);
+      });
+
+      // Desenha o nó em miniatura (clicável para abrir a seção já focado nele)
+      drawNodeCircle(nodesGroup, node, pos.x, pos.y, 13, sec.color, false, () => {
+        if (!dragMoved) {
+          switchToMicro(sec.id, node.id);
+        }
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // B. VISÃO MICRO: ARCO INFERIOR DA SEÇÃO + ÁRVORE DETALHADA (Imagem 2)
+    // -----------------------------------------------------------------------
+    function renderMicroView() {
+      const sec = appData.sections.find(s => s.id === activeSectionId);
+      if (!sec) {
+        switchToMacro();
+        return;
+      }
+
+      const arcsGroup = document.getElementById('tree-arcs');
+      const edgesGroup = document.getElementById('tree-edges');
+      const nodesGroup = document.getElementById('tree-nodes');
+      const ambientGlow = document.getElementById('ambient-glow');
+
+      arcsGroup.innerHTML = '';
+      edgesGroup.innerHTML = '';
+      nodesGroup.innerHTML = '';
+
+      // Centro do arco na base da tela
+      const arcCx = 0;
+      const arcCy = 270;
+      const arcRadius = 155;
+
+      // Brilho radial característico da imagem 2 do Watch Dogs
+      ambientGlow.setAttribute('cx', arcCx);
+      ambientGlow.setAttribute('cy', arcCy - 40);
+      ambientGlow.setAttribute('r', '280');
+      ambientGlow.setAttribute('fill', sec.color);
+      ambientGlow.setAttribute('opacity', '0.14');
+
+      // Interior escuro do arco inferior
+      const innerDisk = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      innerDisk.setAttribute('cx', arcCx);
+      innerDisk.setAttribute('cy', arcCy);
+      innerDisk.setAttribute('r', arcRadius);
+      innerDisk.setAttribute('fill', '#05070a');
+      arcsGroup.appendChild(innerDisk);
+
+      // Arco neon brilhante
+      const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      mainArc.setAttribute('d', describeArc(arcCx, arcCy, arcRadius, -172, -8));
+      mainArc.setAttribute('fill', 'none');
+      mainArc.setAttribute('stroke', sec.color);
+      mainArc.setAttribute('stroke-width', '20');
+      mainArc.setAttribute('stroke-linecap', 'round');
+      mainArc.setAttribute('filter', 'url(#strong-glow)');
+      arcsGroup.appendChild(mainArc);
+
+      // Nome da Seção dentro do arco inferior (igual "Hacking" na imagem 2)
+      const arcTitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      arcTitle.setAttribute('x', arcCx);
+      arcTitle.setAttribute('y', arcCy - 42);
+      arcTitle.setAttribute('text-anchor', 'middle');
+      arcTitle.setAttribute('fill', sec.color);
+      arcTitle.setAttribute('font-family', 'Rajdhani, sans-serif');
+      arcTitle.setAttribute('font-weight', '700');
+      arcTitle.setAttribute('font-size', '28');
+      arcTitle.setAttribute('letter-spacing', '2');
+      arcTitle.textContent = sec.name;
+      arcsGroup.appendChild(arcTitle);
+
+      // Subtítulo com progresso da seção
+      const secNodes = appData.nodes.filter(n => n.sectionId === sec.id);
+      const secDone = secNodes.filter(n => n.status === 'concluido').length;
+      const arcSub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      arcSub.setAttribute('x', arcCx);
+      arcSub.setAttribute('y', arcCy - 18);
+      arcSub.setAttribute('text-anchor', 'middle');
+      arcSub.setAttribute('fill', '#94a3b8');
+      arcSub.setAttribute('font-family', 'Rajdhani, sans-serif');
+      arcSub.setAttribute('font-weight', '600');
+      arcSub.setAttribute('font-size', '13');
+      arcSub.setAttribute('letter-spacing', '1.5');
+      arcSub.textContent = `${secDone}/${secNodes.length} HABILIDADES`;
+      arcsGroup.appendChild(arcSub);
+
+      // Distribui os nós raiz ao longo da parte superior do arco (-142° a -38°)
+      const rootNodes = secNodes.filter(n => !n.parentId);
+      const totalFan = Math.min(115, Math.max(45, rootNodes.length * 36));
+
+      rootNodes.forEach((root, idx) => {
+        const frac = rootNodes.length === 1 ? 0 : (idx / (rootNodes.length - 1)) - 0.5;
+        const baseAngle = -90 + frac * totalFan + (root.angleOffset || 0);
+
+        const anchorPos = polarToCartesian(arcCx, arcCy, arcRadius + 8, baseAngle);
+        const rootPos = polarToCartesian(arcCx, arcCy, arcRadius + 105, baseAngle);
+
+        drawEdge(edgesGroup, anchorPos.x, anchorPos.y, rootPos.x, rootPos.y, root.status, sec.color, 2.8);
+        renderMicroBranchRecursive(sec, secNodes, root, rootPos, baseAngle, 1, edgesGroup, nodesGroup);
+      });
+    }
+
+    function renderMicroBranchRecursive(sec, secNodes, node, pos, currentAngle, depth, edgesGroup, nodesGroup) {
+      const children = secNodes.filter(n => n.parentId === node.id);
+      const branchDist = Math.max(78, 98 - depth * 6);
+      const fanSpread = Math.max(32, 58 - depth * 8);
+
+      children.forEach((child, cIdx) => {
+        const frac = children.length === 1 ? 0 : (cIdx / (children.length - 1)) - 0.5;
+        const childAngle = currentAngle + frac * fanSpread + (child.angleOffset || 0);
+        const childPos = polarToCartesian(pos.x, pos.y, branchDist, childAngle);
+
+        drawEdge(edgesGroup, pos.x, pos.y, childPos.x, childPos.y, child.status, sec.color, 2.5);
+        renderMicroBranchRecursive(sec, secNodes, child, childPos, childAngle, depth + 1, edgesGroup, nodesGroup);
+      });
+
+      const isSelected = selectedNodeId === node.id;
+      drawNodeCircle(nodesGroup, node, pos.x, pos.y, 22, sec.color, isSelected, () => {
+        if (!dragMoved) {
+          selectNode(node.id);
+        }
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // HELPERS DE DESENHO SVG (Linhas de Conexão & Bolinhas com Ícone)
+    // -----------------------------------------------------------------------
+    function drawEdge(container, x1, y1, x2, y2, childStatus, secColor, width) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1.toFixed(1));
+      line.setAttribute('y1', y1.toFixed(1));
+      line.setAttribute('x2', x2.toFixed(1));
+      line.setAttribute('y2', y2.toFixed(1));
+
+      if (childStatus === 'concluido') {
+        line.setAttribute('stroke', secColor);
+        line.setAttribute('stroke-width', width + 0.6);
+        line.setAttribute('filter', 'url(#neon-glow)');
+      } else if (childStatus === 'em_andamento') {
+        line.setAttribute('stroke', '#e2e8f0');
+        line.setAttribute('stroke-width', width);
+      } else {
+        line.setAttribute('stroke', '#283244');
+        line.setAttribute('stroke-width', width * 0.85);
+      }
+
+      container.appendChild(line);
+    }
+
+    function drawNodeCircle(container, node, x, y, radius, secColor, isSelected, onClickHandler) {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', 'svg-node-group');
+      g.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onClickHandler();
+      });
+
+      // Anel alvo branco pulsante quando o nó está selecionado
+      if (isSelected) {
+        const targetRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        targetRing.setAttribute('cx', x.toFixed(1));
+        targetRing.setAttribute('cy', y.toFixed(1));
+        targetRing.setAttribute('r', (radius + 7).toFixed(1));
+        targetRing.setAttribute('fill', 'none');
+        targetRing.setAttribute('stroke', '#ffffff');
+        targetRing.setAttribute('stroke-width', '2');
+        targetRing.setAttribute('stroke-dasharray', '10 5');
+        targetRing.setAttribute('class', 'node-target-ring');
+        g.appendChild(targetRing);
+      }
+
+      // Círculo principal do nó
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', x.toFixed(1));
+      circle.setAttribute('cy', y.toFixed(1));
+      circle.setAttribute('r', radius);
+
+      let iconColor = '#64748b';
+
+      if (node.status === 'concluido') {
+        circle.setAttribute('fill', secColor);
+        circle.setAttribute('stroke', '#ffffff');
+        circle.setAttribute('stroke-width', radius > 16 ? '2' : '1.2');
+        circle.setAttribute('filter', 'url(#neon-glow)');
+        iconColor = '#05070a'; // Alto contraste escuro dentro do neon
+      } else if (node.status === 'em_andamento') {
+        circle.setAttribute('fill', '#0d131f');
+        circle.setAttribute('stroke', '#ffffff');
+        circle.setAttribute('stroke-width', radius > 16 ? '2.8' : '2');
+        circle.setAttribute('filter', 'url(#neon-glow)');
+        iconColor = '#ffffff';
+      } else {
+        circle.setAttribute('fill', '#0a0e17');
+        circle.setAttribute('stroke', '#475569');
+        circle.setAttribute('stroke-width', radius > 16 ? '1.8' : '1.3');
+        iconColor = '#64748b';
+      }
+
+      g.appendChild(circle);
+
+      // Ícone vetorial centralizado dentro da bolinha
+      const iconSize = radius * 1.05;
+      const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      iconSvg.setAttribute('x', (x - iconSize / 2).toFixed(1));
+      iconSvg.setAttribute('y', (y - iconSize / 2).toFixed(1));
+      iconSvg.setAttribute('width', iconSize.toFixed(1));
+      iconSvg.setAttribute('height', iconSize.toFixed(1));
+      iconSvg.setAttribute('viewBox', '0 0 24 24');
+      iconSvg.setAttribute('fill', 'none');
+      iconSvg.setAttribute('stroke', iconColor);
+      iconSvg.setAttribute('stroke-width', '2.2');
+      iconSvg.setAttribute('stroke-linecap', 'round');
+      iconSvg.setAttribute('stroke-linejoin', 'round');
+      iconSvg.setAttribute('pointer-events', 'none');
+      iconSvg.innerHTML = ICON_LIBRARY[node.icon] || ICON_LIBRARY.star;
+      g.appendChild(iconSvg);
+
+      // Rótulo de título abaixo do nó na Visão Micro
+      if (radius >= 20) {
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', x.toFixed(1));
+        label.setAttribute('y', (y + radius + 14).toFixed(1));
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('fill', node.status === 'planejado' ? '#64748b' : '#e2e8f0');
+        label.setAttribute('font-family', 'Rajdhani, sans-serif');
+        label.setAttribute('font-weight', '600');
+        label.setAttribute('font-size', '11');
+        label.setAttribute('letter-spacing', '0.5');
+        label.setAttribute('pointer-events', 'none');
+        const shortTitle = node.title.length > 18 ? node.title.slice(0, 17) + '…' : node.title;
+        label.textContent = shortTitle;
+        g.appendChild(label);
+      }
+
+      container.appendChild(g);
+    }
+
+    // 7. TRANSIÇÃO ENTRE VISÃO MACRO E MICRO
+    function switchToMacro(animate = true) {
+      currentView = 'macro';
+      activeSectionId = null;
+      selectedNodeId = null;
+
+      document.getElementById('macro-brand').classList.remove('hidden');
+      document.getElementById('btn-back-macro').classList.add('hidden');
+      document.getElementById('btn-back-macro').classList.remove('flex');
+
+      document.getElementById('micro-nav').classList.add('hidden');
+      document.getElementById('micro-nav').classList.remove('flex');
+      document.getElementById('micro-add-root-wrap').classList.add('hidden');
+      document.getElementById('btn-add-section').classList.remove('hidden');
+
+      resetCamera(animate);
+      renderAll();
+    }
+
+    function switchToMicro(sectionId, preselectNodeId = null) {
+      const sec = appData.sections.find(s => s.id === sectionId);
+      if (!sec) return;
+
+      currentView = 'micro';
+      activeSectionId = sectionId;
+      selectedNodeId = preselectNodeId;
+
+      document.getElementById('macro-brand').classList.add('hidden');
+      document.getElementById('btn-back-macro').classList.remove('hidden');
+      document.getElementById('btn-back-macro').classList.add('flex');
+
+      document.getElementById('micro-nav').classList.remove('hidden');
+      document.getElementById('micro-nav').classList.add('flex');
+      document.getElementById('micro-add-root-wrap').classList.remove('hidden');
+      document.getElementById('btn-add-section').classList.add('hidden');
+
+      document.getElementById('micro-root-dot').style.backgroundColor = sec.color;
+
+      updateMicroTopNav();
+      resetCamera(true);
+      renderAll();
+    }
+
+    function updateMicroTopNav() {
+      const idx = appData.sections.findIndex(s => s.id === activeSectionId);
+      if (idx === -1) return;
+
+      const currentSec = appData.sections[idx];
+      const prevSec = appData.sections[(idx - 1 + appData.sections.length) % appData.sections.length];
+      const nextSec = appData.sections[(idx + 1) % appData.sections.length];
+
+      const titleEl = document.getElementById('micro-sec-title');
+      titleEl.textContent = currentSec.name;
+      titleEl.style.color = currentSec.color;
+
+      document.getElementById('prev-sec-label').textContent = prevSec.name;
+      document.getElementById('next-sec-label').textContent = nextSec.name;
+
+      // Renderiza dots de paginação
+      const dotsContainer = document.getElementById('section-dots');
+      dotsContainer.innerHTML = '';
+      appData.sections.forEach((s, i) => {
+        const dot = document.createElement('button');
+        dot.className = `w-2 h-2 rounded-full transition-all ${i === idx ? 'scale-125' : 'opacity-40 hover:opacity-80'}`;
+        dot.style.backgroundColor = i === idx ? s.color : '#ffffff';
+        dot.onclick = () => switchToMicro(s.id);
+        dotsContainer.appendChild(dot);
+      });
+    }
+
+    function navigateSection(dir) {
+      if (appData.sections.length <= 1) return;
+      const idx = appData.sections.findIndex(s => s.id === activeSectionId);
+      const nextIdx = (idx + dir + appData.sections.length) % appData.sections.length;
+      switchToMicro(appData.sections[nextIdx].id);
+    }
+
+    // 8. CONTROLE DO PAINEL INFERIOR DO NÓ SELECIONADO
+    function selectNode(nodeId) {
+      selectedNodeId = nodeId;
+      toggleDeleteConfirm(false);
+      renderAll();
+    }
+
+    function deselectNode() {
+      selectedNodeId = null;
+      toggleDeleteConfirm(false);
+      renderAll();
+    }
+
+    function updateNodeHudDrawer() {
+      const drawer = document.getElementById('node-hud-drawer');
+      if (!selectedNodeId) {
+        drawer.classList.add('hidden');
+        return;
+      }
+
+      const node = appData.nodes.find(n => n.id === selectedNodeId);
+      if (!node) {
+        drawer.classList.add('hidden');
+        return;
+      }
+
+      const sec = appData.sections.find(s => s.id === node.sectionId) || { color: '#00e5ff' };
+      const tier = DIFFICULTY_TIERS[node.difficulty] || DIFFICULTY_TIERS[3];
+
+      drawer.classList.remove('hidden');
+
+      // Caixa do ícone
+      const iconBox = document.getElementById('hud-node-icon-box');
+      iconBox.innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ICON_LIBRARY[node.icon] || ICON_LIBRARY.star}</svg>`;
+
+      if (node.status === 'concluido') {
+        iconBox.style.backgroundColor = sec.color;
+        iconBox.style.borderColor = '#ffffff';
+        iconBox.style.color = '#05070a';
+      } else if (node.status === 'em_andamento') {
+        iconBox.style.backgroundColor = '#0f172a';
+        iconBox.style.borderColor = '#ffffff';
+        iconBox.style.color = '#ffffff';
+      } else {
+        iconBox.style.backgroundColor = '#090d16';
+        iconBox.style.borderColor = '#475569';
+        iconBox.style.color = '#64748b';
+      }
+
+      document.getElementById('hud-node-title').textContent = node.title;
+      document.getElementById('hud-node-diff').textContent = `${tier.label} • +${tier.xp} XP`;
+      document.getElementById('hud-node-diff').style.color = sec.color;
+
+      // Badge de Status
+      const statusEl = document.getElementById('hud-node-status');
+      const cycleBtn = document.getElementById('btn-cycle-status');
+
+      if (node.status === 'planejado') {
+        statusEl.textContent = 'Planejado';
+        statusEl.className = 'text-[10px] font-hud font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-slate-800 text-slate-300';
+        cycleBtn.textContent = 'Iniciar Objetivo';
+        cycleBtn.style.backgroundColor = '#ffffff';
+        cycleBtn.style.color = '#05070a';
+      } else if (node.status === 'em_andamento') {
+        statusEl.textContent = 'Em Andamento';
+        statusEl.className = 'text-[10px] font-hud font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-white text-slate-950';
+        cycleBtn.textContent = `Concluir (+${tier.xp} XP)`;
+        cycleBtn.style.backgroundColor = sec.color;
+        cycleBtn.style.color = '#05070a';
+      } else {
+        statusEl.textContent = 'Concluído ✓';
+        statusEl.className = 'text-[10px] font-hud font-bold uppercase tracking-widest px-2 py-0.5 rounded text-slate-950';
+        statusEl.style.backgroundColor = sec.color;
+        cycleBtn.textContent = 'Concluído ✓';
+        cycleBtn.style.backgroundColor = '#1e293b';
+        cycleBtn.style.color = '#e2e8f0';
+      }
+
+      // Data Opcional (só exibe se preenchida)
+      const dateWrap = document.getElementById('hud-node-date-wrap');
+      if (node.completedDate && node.completedDate.trim() !== '') {
+        const parts = node.completedDate.split('-');
+        const formatted = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : node.completedDate;
+        document.getElementById('hud-node-date').textContent = formatted;
+        dateWrap.classList.remove('hidden');
+        dateWrap.classList.add('flex');
+      } else {
+        dateWrap.classList.add('hidden');
+        dateWrap.classList.remove('flex');
+      }
+
+      document.getElementById('hud-node-desc').textContent =
+        node.description && node.description.trim() !== ''
+          ? node.description
+          : 'Nenhuma nota adicional registrada para esta habilidade.';
+    }
+
+    function cycleSelectedNodeStatus() {
+      const node = appData.nodes.find(n => n.id === selectedNodeId);
+      if (!node) return;
+
+      if (node.status === 'planejado') {
+        node.status = 'em_andamento';
+        showToast('Status: Em Andamento');
+      } else if (node.status === 'em_andamento') {
+        node.status = 'concluido';
+        // Se não tiver data definida ainda, preenche automaticamente com hoje (editável)
+        if (!node.completedDate) {
+          const today = new Date().toISOString().slice(0, 10);
+          node.completedDate = today;
+        }
+        const xp = (DIFFICULTY_TIERS[node.difficulty] || DIFFICULTY_TIERS[3]).xp;
+        showToast(`Habilidade Concluída! +${xp} XP`);
+      } else {
+        node.status = 'planejado';
+        showToast('Status redefinido para Planejado');
+      }
+
+      saveData();
+      renderAll();
+    }
+
+    function toggleDeleteConfirm(show) {
+      const bar = document.getElementById('delete-confirm-bar');
+      if (show) bar.classList.remove('hidden');
+      else bar.classList.add('hidden');
+    }
+
+    function confirmDeleteSelectedNode() {
+      if (!selectedNodeId) return;
+
+      // Coleta recursivamente o nó e todas as suas derivações filhas
+      const toDelete = new Set([selectedNodeId]);
+      let added = true;
+      while (added) {
+        added = false;
+        appData.nodes.forEach(n => {
+          if (n.parentId && toDelete.has(n.parentId) && !toDelete.has(n.id)) {
+            toDelete.add(n.id);
+            added = true;
+          }
+        });
+      }
+
+      appData.nodes = appData.nodes.filter(n => !toDelete.has(n.id));
+      selectedNodeId = null;
+      toggleDeleteConfirm(false);
+      saveData();
+      renderAll();
+      showToast('Ramo removido');
+    }
+
+    // 9. MODAIS DE SEÇÃO (Criar / Editar Fatia do Anel)
+    function initColorSwatches() {
+      const container = document.getElementById('sec-color-swatches');
+      container.innerHTML = '';
+      NEON_PALETTE.forEach(c => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'h-8 rounded-lg border border-white/20 flex items-center justify-center transition active:scale-95';
+        btn.style.backgroundColor = c.hex;
+        btn.title = c.name;
+        btn.onclick = () => {
+          document.getElementById('sec-input-color').value = c.hex;
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function openSectionModal(isEdit) {
+      const modal = document.getElementById('section-modal');
+      const titleEl = document.getElementById('section-modal-title');
+      const nameInput = document.getElementById('sec-input-name');
+      const colorInput = document.getElementById('sec-input-color');
+      const delZone = document.getElementById('sec-delete-zone');
+      document.getElementById('sec-del-confirm').classList.add('hidden');
+
+      if (isEdit && activeSectionId) {
+        const sec = appData.sections.find(s => s.id === activeSectionId);
+        if (!sec) return;
+        editingSectionId = sec.id;
+        titleEl.textContent = 'Editar Seção';
+        nameInput.value = sec.name;
+        colorInput.value = sec.color;
+        delZone.classList.remove('hidden');
+      } else {
+        editingSectionId = null;
+        titleEl.textContent = 'Nova Seção no Anel';
+        nameInput.value = '';
+        const nextColor = NEON_PALETTE[appData.sections.length % NEON_PALETTE.length].hex;
+        colorInput.value = nextColor;
+        delZone.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+      setTimeout(() => nameInput.focus(), 80);
+    }
+
+    function closeSectionModal() {
+      document.getElementById('section-modal').classList.add('hidden');
+    }
+
+    function saveSectionModal() {
+      const name = document.getElementById('sec-input-name').value.trim();
+      const color = document.getElementById('sec-input-color').value;
+
+      if (!name) {
+        showToast('Digite um nome para a seção');
+        return;
+      }
+
+      if (editingSectionId) {
+        const sec = appData.sections.find(s => s.id === editingSectionId);
+        if (sec) {
+          sec.name = name;
+          sec.color = color;
+          updateMicroTopNav();
+          document.getElementById('micro-root-dot').style.backgroundColor = color;
+        }
+        showToast('Seção atualizada');
+      } else {
+        const newSec = {
+          id: 'sec_' + Date.now(),
+          name,
+          color
+        };
+        appData.sections.push(newSec);
+        showToast(`Seção "${name}" criada`);
+      }
+
+      saveData();
+      closeSectionModal();
+      renderAll();
+    }
+
+    function deleteCurrentSection() {
+      if (!editingSectionId) return;
+      appData.sections = appData.sections.filter(s => s.id !== editingSectionId);
+      appData.nodes = appData.nodes.filter(n => n.sectionId !== editingSectionId);
+      saveData();
+      closeSectionModal();
+      switchToMacro();
+      showToast('Seção excluída');
+    }
+
+    // 10. MODAIS DE NÓ (Criar Ramo Principal / Derivar / Editar Habilidade)
+    function initIconPicker() {
+      const grid = document.getElementById('icon-picker-grid');
+      grid.innerHTML = '';
+      Object.keys(ICON_LIBRARY).forEach(key => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.iconKey = key;
+        btn.className = 'icon-choice-btn p-2 rounded-lg border border-slate-800 bg-[#0b0f17] hover:border-cyan-400 text-slate-300 flex items-center justify-center transition';
+        btn.innerHTML = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON_LIBRARY[key]}</svg>`;
+        btn.onclick = () => selectIconInPicker(key);
+        grid.appendChild(btn);
+      });
+    }
+
+    function selectIconInPicker(key) {
+      selectedIconKey = key;
+      document.querySelectorAll('.icon-choice-btn').forEach(btn => {
+        if (btn.dataset.iconKey === key) {
+          btn.classList.add('border-cyan-400', 'bg-cyan-500/20', 'text-cyan-300');
+          btn.classList.remove('border-slate-800', 'text-slate-300');
+        } else {
+          btn.classList.remove('border-cyan-400', 'bg-cyan-500/20', 'text-cyan-300');
+          btn.classList.add('border-slate-800', 'text-slate-300');
+        }
+      });
+    }
+
+    function openNodeModal(mode) {
+      nodeModalMode = mode;
+      const modal = document.getElementById('node-modal');
+      const modalTitle = document.getElementById('node-modal-title');
+      const modalSub = document.getElementById('node-modal-subtitle');
+
+      const titleIn = document.getElementById('node-input-title');
+      const diffIn = document.getElementById('node-input-diff');
+      const statusIn = document.getElementById('node-input-status');
+      const dateIn = document.getElementById('node-input-date');
+      const angleIn = document.getElementById('node-input-angle');
+      const descIn = document.getElementById('node-input-desc');
+
+      if (mode === 'edit') {
+        const node = appData.nodes.find(n => n.id === selectedNodeId);
+        if (!node) return;
+        editingNodeId = node.id;
+        derivingParentId = node.parentId;
+        modalTitle.textContent = 'Editar Habilidade';
+        modalSub.textContent = 'Modificar parâmetros do nó';
+        titleIn.value = node.title;
+        diffIn.value = String(node.difficulty || 3);
+        statusIn.value = node.status || 'planejado';
+        dateIn.value = node.completedDate || '';
+        angleIn.value = String(node.angleOffset || 0);
+        descIn.value = node.description || '';
+        selectIconInPicker(node.icon || 'star');
+      } else if (mode === 'derive') {
+        const parentNode = appData.nodes.find(n => n.id === selectedNodeId);
+        if (!parentNode) return;
+        editingNodeId = null;
+        derivingParentId = parentNode.id;
+        modalTitle.textContent = 'Derivar Nova Habilidade';
+        modalSub.textContent = `Derivado de: ${parentNode.title}`;
+        titleIn.value = '';
+        diffIn.value = '3';
+        statusIn.value = 'planejado';
+        dateIn.value = '';
+        angleIn.value = '0';
+        descIn.value = '';
+        selectIconInPicker(parentNode.icon || 'star');
+      } else {
+        // create_root
+        editingNodeId = null;
+        derivingParentId = null;
+        modalTitle.textContent = 'Novo Ramo Principal';
+        modalSub.textContent = 'Conectado diretamente ao arco da seção';
+        titleIn.value = '';
+        diffIn.value = '2';
+        statusIn.value = 'planejado';
+        dateIn.value = '';
+        angleIn.value = '0';
+        descIn.value = '';
+        selectIconInPicker('star');
+      }
+
+      document.getElementById('angle-offset-label').textContent =
+        angleIn.value == 0 ? '0° (Automático)' : (angleIn.value > 0 ? `+${angleIn.value}°` : `${angleIn.value}°`);
+
+      modal.classList.remove('hidden');
+      setTimeout(() => titleIn.focus(), 80);
+    }
+
+    function closeNodeModal() {
+      document.getElementById('node-modal').classList.add('hidden');
+    }
+
+    function saveNodeModal() {
+      const title = document.getElementById('node-input-title').value.trim();
+      if (!title) {
+        showToast('Digite o nome da habilidade');
+        return;
+      }
+
+      const difficulty = parseInt(document.getElementById('node-input-diff').value, 10) || 3;
+      const status = document.getElementById('node-input-status').value;
+      const completedDate = document.getElementById('node-input-date').value;
+      const angleOffset = parseInt(document.getElementById('node-input-angle').value, 10) || 0;
+      const description = document.getElementById('node-input-desc').value.trim();
+
+      if (nodeModalMode === 'edit' && editingNodeId) {
+        const node = appData.nodes.find(n => n.id === editingNodeId);
+        if (node) {
+          node.title = title;
+          node.difficulty = difficulty;
+          node.status = status;
+          node.completedDate = completedDate;
+          node.angleOffset = angleOffset;
+          node.description = description;
+          node.icon = selectedIconKey;
+        }
+        showToast('Habilidade atualizada');
+      } else {
+        const newNode = {
+          id: 'node_' + Date.now(),
+          sectionId: activeSectionId,
+          parentId: derivingParentId,
+          title,
+          description,
+          difficulty,
+          status,
+          icon: selectedIconKey,
+          completedDate,
+          angleOffset
+        };
+        appData.nodes.push(newNode);
+        selectedNodeId = newNode.id;
+        showToast(nodeModalMode === 'derive' ? 'Derivação adicionada' : 'Ramo criado');
+      }
+
+      saveData();
+      closeNodeModal();
+      renderAll();
+    }
+
+    // 11. MOLDE, BACKUP & EXPORTAÇÃO JSON
+    function openDataModal() {
+      document.getElementById('wipe-confirm-box').classList.add('hidden');
+      document.getElementById('data-modal').classList.remove('hidden');
+    }
+
+    function closeDataModal() {
+      document.getElementById('data-modal').classList.add('hidden');
+    }
+
+    function showWipeConfirm() {
+      document.getElementById('wipe-confirm-box').classList.remove('hidden');
+    }
+
+    function wipeToBlankMold() {
+      appData = { sections: [], nodes: [] };
+      saveData();
+      closeDataModal();
+      switchToMacro();
+      showToast('Molde zerado com sucesso');
+    }
+
+    function restoreDemoData() {
+      appData = getDefaultDemoData();
+      saveData();
+      closeDataModal();
+      switchToMacro();
+      showToast('Exemplo restaurado');
+    }
+
+    function exportBackupJSON() {
+      const dataStr = JSON.stringify(appData, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateTag = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `ctos_skill_tree_${dateTag}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Backup .json exportado');
+    }
+
+    function importBackupJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed.sections) && Array.isArray(parsed.nodes)) {
+            appData = parsed;
+            saveData();
+            closeDataModal();
+            switchToMacro();
+            showToast('Backup restaurado com sucesso!');
+          } else {
+            showToast('Arquivo JSON inválido');
+          }
+        } catch (err) {
+          showToast('Erro ao ler arquivo JSON');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // 12. CONTROLE DE CÂMERA INTERATIVA (PAN & PINCH-TO-ZOOM MOBILE/DESKTOP)
+    function applyCameraTransform(animate = false) {
+      const vp = document.getElementById('viewport-group');
+      vp.style.transition = animate ? 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
+      vp.setAttribute('transform', `translate(${camera.x.toFixed(1)}, ${camera.y.toFixed(1)}) scale(${camera.scale.toFixed(3)})`);
+    }
+
+    function zoomBy(factor) {
+      camera.scale = Math.min(3.2, Math.max(0.45, camera.scale * factor));
+      applyCameraTransform(true);
+    }
+
+    function resetCamera(animate = true) {
+      camera = { x: 0, y: 0, scale: 1 };
+      applyCameraTransform(animate);
+    }
+
+    function setupPointerEvents() {
+      const svg = document.getElementById('skill-svg');
+
+      // Mouse Pan
+      svg.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragMoved = false;
+        dragStart = { x: e.clientX, y: e.clientY };
+        cameraStart = { x: camera.x, y: camera.y };
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const scaleRatio = 1000 / Math.min(rect.width, rect.height);
+        const dx = (e.clientX - dragStart.x) * scaleRatio;
+        const dy = (e.clientY - dragStart.y) * scaleRatio;
+
+        if (Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) > 6) {
+          dragMoved = true;
+        }
+        camera.x = cameraStart.x + dx;
+        camera.y = cameraStart.y + dy;
+        applyCameraTransform(false);
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      // Mouse Wheel Zoom
+      svg.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.12 : 0.89;
+        camera.scale = Math.min(3.2, Math.max(0.45, camera.scale * factor));
+        applyCameraTransform(false);
+      }, { passive: false });
+
+      // Touch Pan & Pinch-to-Zoom (Android)
+      svg.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          dragMoved = false;
+          dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          cameraStart = { x: camera.x, y: camera.y };
+        } else if (e.touches.length === 2) {
+          isDragging = false;
+          initialPinchDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          initialPinchScale = camera.scale;
+        }
+      }, { passive: true });
+
+      svg.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && isDragging) {
+          const rect = svg.getBoundingClientRect();
+          const scaleRatio = 1000 / Math.min(rect.width, rect.height);
+          const dx = (e.touches[0].clientX - dragStart.x) * scaleRatio;
+          const dy = (e.touches[0].clientY - dragStart.y) * scaleRatio;
+
+          if (Math.hypot(e.touches[0].clientX - dragStart.x, e.touches[0].clientY - dragStart.y) > 8) {
+            dragMoved = true;
+          }
+          camera.x = cameraStart.x + dx;
+          camera.y = cameraStart.y + dy;
+          applyCameraTransform(false);
+        } else if (e.touches.length === 2 && initialPinchDist) {
+          const currentDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const ratio = currentDist / initialPinchDist;
+          camera.scale = Math.min(3.2, Math.max(0.45, initialPinchScale * ratio));
+          applyCameraTransform(false);
+        }
+      }, { passive: true });
+
+      svg.addEventListener('touchend', () => {
+        isDragging = false;
+        initialPinchDist = null;
+      });
+
+      // Tocar no fundo vazio fecha o painel de detalhes do nó
+      svg.addEventListener('click', () => {
+        if (!dragMoved && selectedNodeId) {
+          deselectNode();
+        }
+      });
+    }
+
+    // Inicia o app ao carregar a janela
+    window.onload = initApp;
+  </script>
+</body>
+</html>
